@@ -2,91 +2,105 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Удалённый рабочий стол</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Remote Desktop</title>
 <style>
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  body {
-    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
-    min-height: 100vh;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-family: 'Segoe UI', sans-serif;
-    color: white;
-  }
-  .container {
-    text-align: center;
-    padding: 40px;
-    max-width: 600px;
-    width: 90%;
-  }
-  .logo {
-    font-size: 64px;
-    margin-bottom: 16px;
-  }
-  h1 {
-    font-size: 32px;
-    margin-bottom: 10px;
-    font-weight: 700;
-  }
-  .subtitle {
-    font-size: 16px;
-    color: #a0aec0;
-    margin-bottom: 50px;
-  }
-  .card {
-    background: rgba(255,255,255,0.07);
-    border: 1px solid rgba(255,255,255,0.12);
-    border-radius: 20px;
-    padding: 36px;
-    margin-bottom: 20px;
-    cursor: pointer;
-    transition: all 0.3s;
-    text-decoration: none;
-    display: block;
-    color: white;
-  }
-  .card:hover {
-    background: rgba(255,255,255,0.13);
-    transform: translateY(-3px);
-    border-color: rgba(99,179,237,0.5);
-  }
-  .card-icon { font-size: 48px; margin-bottom: 14px; }
-  .card h2 { font-size: 22px; margin-bottom: 8px; }
-  .card p { color: #a0aec0; font-size: 14px; line-height: 1.5; }
-  .badge {
-    display: inline-block;
-    background: #e53e3e;
-    color: white;
-    font-size: 11px;
-    padding: 2px 10px;
-    border-radius: 20px;
-    margin-top: 10px;
-    font-weight: 600;
-  }
-  .badge.green { background: #38a169; }
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:linear-gradient(135deg,#1a1a2e,#16213e,#0f3460);min-height:100vh;
+display:flex;align-items:center;justify-content:center;
+font-family:'Segoe UI',sans-serif;color:#fff}
+.c{text-align:center;padding:40px;max-width:640px;width:90%}
+.logo{font-size:64px;margin-bottom:16px}
+h1{font-size:30px;margin-bottom:8px;font-weight:700}
+.sub{font-size:15px;color:#a0aec0;margin-bottom:40px}
+.card{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);
+border-radius:20px;padding:30px;margin-bottom:16px}
+.status-row{display:flex;align-items:center;justify-content:center;gap:10px;
+font-size:16px;font-weight:600;margin-bottom:20px}
+.dot{width:14px;height:14px;border-radius:50%;background:#fc8181;
+animation:p 2s infinite}
+.dot.on{background:#68d391}
+@keyframes p{0%,100%{opacity:1}50%{opacity:.4}}
+.watch-btn{display:block;background:#3182ce;color:#fff;text-decoration:none;
+padding:14px 32px;border-radius:12px;font-size:16px;font-weight:600;
+margin:0 auto 20px;width:fit-content;transition:all .2s}
+.watch-btn:hover{background:#2b6cb0;transform:translateY(-2px)}
+.watch-btn:disabled,.watch-btn.disabled{background:#4a5568;cursor:not-allowed;transform:none}
+.info-box{background:rgba(0,0,0,.25);border-radius:14px;padding:20px;text-align:left}
+.info-box h3{font-size:14px;color:#90cdf4;margin-bottom:12px}
+.step{font-size:14px;color:#e2e8f0;margin-bottom:8px;display:flex;gap:10px}
+.step span:first-child{color:#68d391;font-weight:700;min-width:20px}
+.viewers{font-size:13px;color:#a0aec0;margin-top:12px}
+.viewers b{color:#68d391}
+code{background:rgba(255,255,255,.1);padding:2px 8px;border-radius:6px;
+font-family:monospace;font-size:13px;color:#90cdf4}
 </style>
 </head>
 <body>
-<div class="container">
-  <div class="logo">🖥️</div>
-  <h1>Удалённый рабочий стол</h1>
-  <p class="subtitle">Простой доступ к компьютеру друга</p>
+<div class="c">
+  <div class="logo">&#128421;</div>
+  <h1>Remote Desktop Relay</h1>
+  <p class="sub">Сервер работает — жди подключения от друга</p>
 
-  <a href="/host" class="card">
-    <div class="card-icon">📡</div>
-    <h2>Я хочу дать доступ к своему компьютеру</h2>
-    <p>Запусти сервер и получи ссылку для отправки другу, который хочет подключиться</p>
-    <span class="badge">Для друга</span>
-  </a>
+  <div class="card">
+    <div class="status-row">
+      <span class="dot" id="dot"></span>
+      <span id="status-text">Ожидание подключения от друга...</span>
+    </div>
 
-  <a href="/view" class="card">
-    <div class="card-icon">👁️</div>
-    <h2>Я хочу подключиться к компьютеру друга</h2>
-    <p>Введи ссылку, которую прислал друг, и управляй его компьютером</p>
-    <span class="badge green">Для тебя</span>
-  </a>
+    <a href="/watch" class="watch-btn disabled" id="watch-btn">
+      &#128065; Смотреть экран друга
+    </a>
+
+    <div class="viewers">Подключено зрителей: <b id="vc">0</b></div>
+  </div>
+
+  <div class="info-box">
+    <h3>&#128203; Инструкция для друга</h3>
+    <div class="step"><span>1</span><span>Скачай <code>RemoteDesktop.exe</code> и запусти его</span></div>
+    <div class="step"><span>2</span><span>В появившемся окне введи адрес сервера: <code id="server-url">...</code></span></div>
+    <div class="step"><span>3</span><span>Нажми Enter — зелёный статус появится выше</span></div>
+    <div class="step"><span>4</span><span>Нажми кнопку «Смотреть экран друга»</span></div>
+  </div>
 </div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js"></script>
+<script>
+const socket = io();
+
+socket.on('connect', () => {
+  socket.emit('viewer_join');
+  document.getElementById('server-url').textContent = window.location.origin;
+});
+
+socket.on('agent_connected', () => {
+  document.getElementById('dot').classList.add('on');
+  document.getElementById('status-text').textContent = 'Друг подключён! ✓';
+  const btn = document.getElementById('watch-btn');
+  btn.classList.remove('disabled');
+  btn.removeAttribute('href');
+  btn.setAttribute('href', '/watch');
+});
+
+socket.on('agent_disconnected', () => {
+  document.getElementById('dot').classList.remove('on');
+  document.getElementById('status-text').textContent = 'Ожидание подключения от друга...';
+  const btn = document.getElementById('watch-btn');
+  btn.classList.add('disabled');
+});
+
+setInterval(() => {
+  fetch('/api/status').then(r=>r.json()).then(d => {
+    document.getElementById('vc').textContent = d.viewers;
+    if (d.agent_connected) {
+      document.getElementById('dot').classList.add('on');
+      document.getElementById('status-text').textContent = 'Друг подключён! ✓';
+      const btn = document.getElementById('watch-btn');
+      btn.classList.remove('disabled');
+      btn.setAttribute('href', '/watch');
+    }
+  }).catch(()=>{});
+}, 3000);
+</script>
 </body>
 </html>
