@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Удалённый рабочий стол</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Segoe UI', sans-serif;
+    color: white;
+  }
+  .container {
+    text-align: center;
+    padding: 40px;
+    max-width: 600px;
+    width: 90%;
+  }
+  .logo {
+    font-size: 64px;
+    margin-bottom: 16px;
+  }
+  h1 {
+    font-size: 32px;
+    margin-bottom: 10px;
+    font-weight: 700;
+  }
+  .subtitle {
+    font-size: 16px;
+    color: #a0aec0;
+    margin-bottom: 50px;
+  }
+  .card {
+    background: rgba(255,255,255,0.07);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 20px;
+    padding: 36px;
+    margin-bottom: 20px;
+    cursor: pointer;
+    transition: all 0.3s;
+    text-decoration: none;
+    display: block;
+    color: white;
+  }
+  .card:hover {
+    background: rgba(255,255,255,0.13);
+    transform: translateY(-3px);
+    border-color: rgba(99,179,237,0.5);
+  }
+  .card-icon { font-size: 48px; margin-bottom: 14px; }
+  .card h2 { font-size: 22px; margin-bottom: 8px; }
+  .card p { color: #a0aec0; font-size: 14px; line-height: 1.5; }
+  .badge {
+    display: inline-block;
+    background: #e53e3e;
+    color: white;
+    font-size: 11px;
+    padding: 2px 10px;
+    border-radius: 20px;
+    margin-top: 10px;
+    font-weight: 600;
+  }
+  .badge.green { background: #38a169; }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="logo">🖥️</div>
+  <h1>Удалённый рабочий стол</h1>
+  <p class="subtitle">Простой доступ к компьютеру друга</p>
+
+  <a href="/host" class="card">
+    <div class="card-icon">📡</div>
+    <h2>Я хочу дать доступ к своему компьютеру</h2>
+    <p>Запусти сервер и получи ссылку для отправки другу, который хочет подключиться</p>
+    <span class="badge">Для друга</span>
+  </a>
+
+  <a href="/view" class="card">
+    <div class="card-icon">👁️</div>
+    <h2>Я хочу подключиться к компьютеру друга</h2>
+    <p>Введи ссылку, которую прислал друг, и управляй его компьютером</p>
+    <span class="badge green">Для тебя</span>
+  </a>
+</div>
+</body>
+</html>

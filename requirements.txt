@@ -1,0 +1,14 @@
+flask
+flask-socketio
+pillow
+pyautogui
+mss
+pyngrok
+eventlet
+eventlet
+flask
+flask-socketio
+mss
+pillow
+pyautogui
+pyngrok

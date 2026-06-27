@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Просмотр — Удалённый рабочий стол</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #0d0d0d;
+    font-family: 'Segoe UI', sans-serif;
+    color: white;
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+  .toolbar {
+    background: #1a1a2e;
+    padding: 8px 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+    flex-shrink: 0;
+    z-index: 100;
+  }
+  .toolbar-title { font-size: 14px; font-weight: 600; color: #90cdf4; }
+  .status-dot {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    background: #fc8181;
+    transition: background 0.3s;
+  }
+  .status-dot.connected { background: #68d391; animation: pulse 2s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1}50%{opacity:0.5} }
+  .status-text { font-size: 12px; color: #a0aec0; }
+  .spacer { flex: 1; }
+  .toolbar-btn {
+    background: rgba(255,255,255,0.1);
+    border: none;
+    color: white;
+    padding: 5px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 12px;
+    transition: background 0.2s;
+  }
+  .toolbar-btn:hover { background: rgba(255,255,255,0.2); }
+  .toolbar-btn.active { background: #3182ce; }
+  .fps-label { font-size: 11px; color: #718096; }
+  .screen-area {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    position: relative;
+  }
+  #screen {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    cursor: none;
+    display: block;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  .custom-cursor {
+    position: absolute;
+    width: 20px;
+    height: 20px;
+    pointer-events: none;
+    z-index: 999;
+    transform: translate(-2px, -2px);
+  }
+  .custom-cursor::before {
+    content: '';
+    position: absolute;
+    width: 0; height: 0;
+    border-left: 7px solid white;
+    border-top: 0;
+    border-bottom: 12px solid transparent;
+    border-right: 8px solid transparent;
+    filter: drop-shadow(1px 1px 1px rgba(0,0,0,0.8));
+  }
+  .overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0,0,0,0.85);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+  }
+  .overlay.hidden { display: none; }
+  .overlay-icon { font-size: 64px; margin-bottom: 20px; }
+  .overlay h2 { font-size: 22px; margin-bottom: 10px; }
+  .overlay p { color: #a0aec0; font-size: 14px; text-align: center; max-width: 400px; }
+  .connect-btn {
+    margin-top: 24px;
+    background: #3182ce;
+    color: white;
+    border: none;
+    padding: 14px 32px;
+    border-radius: 12px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .connect-btn:hover { background: #2b6cb0; transform: translateY(-1px); }
+  .kb-panel {
+    display: none;
+    position: fixed;
+    bottom: 60px;
+    right: 20px;
+    background: #1a1a2e;
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 16px;
+    padding: 16px;
+    z-index: 200;
+    min-width: 280px;
+  }
+  .kb-panel.visible { display: block; }
+  .kb-panel h3 { font-size: 13px; color: #90cdf4; margin-bottom: 12px; }
+  .kb-input {
+    width: 100%;
+    background: rgba(0,0,0,0.4);
+    border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 8px;
+    color: white;
+    padding: 10px 12px;
+    font-size: 15px;
+    outline: none;
+    margin-bottom: 10px;
+  }
+  .kb-input:focus { border-color: #3182ce; }
+  .send-btn {
+    width: 100%;
+    background: #3182ce;
+    color: white;
+    border: none;
+    padding: 10px;
+    border-radius: 8px;
+    font-size: 14px;
+    cursor: pointer;
+    font-weight: 600;
+  }
+  .send-btn:hover { background: #2b6cb0; }
+  .latency { font-size: 11px; color: #718096; margin-left: 8px; }
+</style>
+</head>
+<body>
+
+<div class="toolbar">
+  <span class="status-dot" id="status-dot"></span>
+  <span class="toolbar-title">🖥️ Удалённый рабочий стол</span>
+  <span class="status-text" id="status-text">Подключение...</span>
+  <span class="latency" id="latency"></span>
+  <span class="spacer"></span>
+  <span class="fps-label" id="fps-label">0 FPS</span>
+  <button class="toolbar-btn" id="ctrl-toggle" onclick="toggleControl()">🖱️ Управление: ВКЛ</button>
+  <button class="toolbar-btn" onclick="toggleKeyboard()">⌨️ Клавиатура</button>
+  <button class="toolbar-btn" onclick="toggleFullscreen()">⛶ Весь экран</button>
+</div>
+
+<div class="screen-area" id="screen-area">
+  <img id="screen" src="" alt="Экран" draggable="false">
+  <div class="custom-cursor" id="cursor"></div>
+
+  <div class="overlay" id="overlay">
+    <div class="overlay-icon">🖥️</div>
+    <h2>Готов к подключению</h2>
+    <p>Нажми кнопку ниже, чтобы подключиться к компьютеру друга и увидеть его экран</p>
+    <button class="connect-btn" onclick="startViewing()">▶ Подключиться</button>
+  </div>
+</div>
+
+<div class="kb-panel" id="kb-panel">
+  <h3>⌨️ Отправить текст</h3>
+  <input type="text" class="kb-input" id="kb-input" placeholder="Введи текст и нажми Enter..." onkeydown="handleKbInput(event)">
+  <button class="send-btn" onclick="sendText()">Отправить текст</button>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js"></script>
+<script>
+  const socket = io();
+  const screenEl = document.getElementById('screen');
+  const cursorEl = document.getElementById('cursor');
+  const screenArea = document.getElementById('screen-area');
+  const overlay = document.getElementById('overlay');
+
+  let controlEnabled = true;
+  let frameCount = 0;
+  let lastFpsTime = Date.now();
+  let remoteWidth = 1920;
+  let remoteHeight = 1080;
+  let frameTimestamp = 0;
+
+  socket.on('connect', () => {
+    document.getElementById('status-dot').classList.add('connected');
+    document.getElementById('status-text').textContent = 'Подключено';
+  });
+
+  socket.on('disconnect', () => {
+    document.getElementById('status-dot').classList.remove('connected');
+    document.getElementById('status-text').textContent = 'Соединение потеряно...';
+  });
+
+  socket.on('frame', (data) => {
+    const now = Date.now();
+    if (frameTimestamp > 0) {
+      document.getElementById('latency').textContent = (now - frameTimestamp) + 'мс';
+    }
+    frameTimestamp = now;
+    screenEl.src = 'data:image/jpeg;base64,' + data.image;
+    frameCount++;
+    const elapsed = (now - lastFpsTime) / 1000;
+    if (elapsed >= 1) {
+      document.getElementById('fps-label').textContent = Math.round(frameCount / elapsed) + ' FPS';
+      frameCount = 0;
+      lastFpsTime = now;
+    }
+  });
+
+  screenEl.onload = function() {
+    remoteWidth = screenEl.naturalWidth;
+    remoteHeight = screenEl.naturalHeight;
+  };
+
+  function startViewing() {
+    overlay.classList.add('hidden');
+    socket.emit('start_stream');
+  }
+
+  function getScaleFactors() {
+    const rect = screenEl.getBoundingClientRect();
+    const displayedW = rect.width;
+    const displayedH = rect.height;
+    return {
+      sx: remoteWidth / displayedW,
+      sy: remoteHeight / displayedH,
+      rect: rect
+    };
+  }
+
+  function getRelativePos(e) {
+    const { sx, sy, rect } = getScaleFactors();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    return { x, y, sx, sy, rect };
+  }
+
+  screenArea.addEventListener('mousemove', (e) => {
+    const { x, y, sx, sy, rect } = getRelativePos(e);
+    cursorEl.style.left = (rect.left + x) + 'px';
+    cursorEl.style.top = (rect.top + y) + 'px';
+    if (!controlEnabled || x < 0 || y < 0 || x > rect.width || y > rect.height) return;
+    socket.emit('mouse_move', { x: Math.round(x), y: Math.round(y), scale_x: sx, scale_y: sy });
+  });
+
+  screenArea.addEventListener('click', (e) => {
+    if (!controlEnabled) return;
+    const { x, y, sx, sy, rect } = getRelativePos(e);
+    if (x < 0 || y < 0 || x > rect.width || y > rect.height) return;
+    socket.emit('mouse_click', { x: Math.round(x), y: Math.round(y), button: 'left', scale_x: sx, scale_y: sy });
+  });
+
+  screenArea.addEventListener('dblclick', (e) => {
+    if (!controlEnabled) return;
+    const { x, y, sx, sy, rect } = getRelativePos(e);
+    socket.emit('mouse_dblclick', { x: Math.round(x), y: Math.round(y), scale_x: sx, scale_y: sy });
+  });
+
+  screenArea.addEventListener('contextmenu', (e) => {
+    e.preventDefault();
+    if (!controlEnabled) return;
+    const { x, y, sx, sy, rect } = getRelativePos(e);
+    if (x < 0 || y < 0 || x > rect.width || y > rect.height) return;
+    socket.emit('mouse_click', { x: Math.round(x), y: Math.round(y), button: 'right', scale_x: sx, scale_y: sy });
+  });
+
+  screenArea.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    if (!controlEnabled) return;
+    socket.emit('mouse_scroll', { delta: e.deltaY });
+  }, { passive: false });
+
+  document.addEventListener('keydown', (e) => {
+    if (!controlEnabled) return;
+    if (document.getElementById('kb-input') === document.activeElement) return;
+    e.preventDefault();
+    const modifiers = [];
+    if (e.ctrlKey) modifiers.push('ctrl');
+    if (e.altKey) modifiers.push('alt');
+    if (e.shiftKey) modifiers.push('shift');
+    socket.emit('key_press', { key: e.key, modifiers });
+  });
+
+  function toggleControl() {
+    controlEnabled = !controlEnabled;
+    const btn = document.getElementById('ctrl-toggle');
+    btn.textContent = controlEnabled ? '🖱️ Управление: ВКЛ' : '🖱️ Управление: ВЫКЛ';
+    btn.classList.toggle('active', !controlEnabled);
+    screenEl.style.cursor = controlEnabled ? 'none' : 'default';
+    cursorEl.style.display = controlEnabled ? 'block' : 'none';
+  }
+
+  function toggleKeyboard() {
+    const panel = document.getElementById('kb-panel');
+    panel.classList.toggle('visible');
+    if (panel.classList.contains('visible')) {
+      document.getElementById('kb-input').focus();
+    }
+  }
+
+  function handleKbInput(e) {
+    if (e.key === 'Enter') {
+      sendText();
+      e.preventDefault();
+    }
+  }
+
+  function sendText() {
+    const input = document.getElementById('kb-input');
+    const text = input.value;
+    if (text) {
+      socket.emit('type_text', { text });
+      input.value = '';
+    }
+  }
+
+  function toggleFullscreen() {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen();
+    } else {
+      document.exitFullscreen();
+    }
+  }
+</script>
+</body>
+</html>

@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Хост — Удалённый рабочий стол</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Segoe UI', sans-serif;
+    color: white;
+  }
+  .container { text-align: center; padding: 40px; max-width: 620px; width: 90%; }
+  .logo { font-size: 64px; margin-bottom: 16px; }
+  h1 { font-size: 28px; margin-bottom: 10px; }
+  .subtitle { color: #a0aec0; margin-bottom: 40px; font-size: 15px; }
+  .status-card {
+    background: rgba(255,255,255,0.07);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 20px;
+    padding: 36px;
+    margin-bottom: 20px;
+  }
+  .status-dot {
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    background: #68d391;
+    display: inline-block;
+    margin-right: 8px;
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+  .status-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    color: #68d391;
+    margin-bottom: 30px;
+    font-weight: 600;
+  }
+  .link-box {
+    background: rgba(0,0,0,0.3);
+    border: 2px solid rgba(99,179,237,0.4);
+    border-radius: 12px;
+    padding: 16px 20px;
+    font-size: 15px;
+    color: #90cdf4;
+    word-break: break-all;
+    margin-bottom: 16px;
+    font-family: monospace;
+    letter-spacing: 0.5px;
+  }
+  .btn {
+    display: inline-block;
+    padding: 12px 28px;
+    border-radius: 12px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    border: none;
+    transition: all 0.2s;
+    margin: 6px;
+  }
+  .btn-blue { background: #3182ce; color: white; }
+  .btn-blue:hover { background: #2b6cb0; }
+  .btn-gray { background: rgba(255,255,255,0.1); color: white; }
+  .btn-gray:hover { background: rgba(255,255,255,0.2); }
+  .btn-green { background: #38a169; color: white; }
+  .btn-green:hover { background: #2f855a; }
+  .info { color: #a0aec0; font-size: 13px; margin-top: 20px; line-height: 1.6; }
+  .viewers-count {
+    font-size: 14px;
+    color: #a0aec0;
+    margin-bottom: 20px;
+  }
+  .viewers-count span { color: #68d391; font-weight: bold; }
+  #copied-msg {
+    display: none;
+    color: #68d391;
+    font-size: 13px;
+    margin-top: 8px;
+  }
+  .step {
+    background: rgba(255,255,255,0.04);
+    border-radius: 12px;
+    padding: 14px 18px;
+    margin-top: 10px;
+    text-align: left;
+    font-size: 14px;
+    color: #e2e8f0;
+  }
+  .step strong { color: #90cdf4; }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="logo">📡</div>
+  <h1>Твой компьютер доступен</h1>
+  <p class="subtitle">Отправь ссылку другу, чтобы он мог подключиться</p>
+
+  <div class="status-card">
+    <div class="status-row">
+      <span class="status-dot"></span>
+      Сервер работает
+    </div>
+
+    <div class="viewers-count">
+      Подключено зрителей: <span id="viewer-count">0</span>
+    </div>
+
+    <div class="link-box" id="share-link">Загрузка ссылки...</div>
+
+    <button class="btn btn-blue" onclick="copyLink()">📋 Скопировать ссылку</button>
+    <button class="btn btn-gray" onclick="openViewer()">👁️ Открыть просмотр</button>
+    <div id="copied-msg">✅ Скопировано!</div>
+
+    <div class="step">
+      <strong>Как это работает:</strong><br>
+      1. Скопируй ссылку выше<br>
+      2. Отправь её другу в мессенджере<br>
+      3. Друг откроет ссылку в браузере и увидит твой экран<br>
+      4. Друг сможет управлять мышью и клавиатурой
+    </div>
+
+    <p class="info">⚠️ Закрой эту страницу, чтобы остановить доступ</p>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js"></script>
+<script>
+  const socket = io();
+  let viewerLink = '';
+
+  socket.on('connect', () => {
+    socket.emit('start_stream');
+  });
+
+  function getShareLink() {
+    const host = window.location.origin;
+    return host + '/view';
+  }
+
+  function updateLink() {
+    viewerLink = getShareLink();
+    document.getElementById('share-link').textContent = viewerLink;
+  }
+
+  function copyLink() {
+    if (!viewerLink) return;
+    navigator.clipboard.writeText(viewerLink).then(() => {
+      const msg = document.getElementById('copied-msg');
+      msg.style.display = 'block';
+      setTimeout(() => msg.style.display = 'none', 2500);
+    });
+  }
+
+  function openViewer() {
+    window.open('/view', '_blank');
+  }
+
+  setInterval(() => {
+    fetch('/api/viewers').then(r => r.json()).then(d => {
+      document.getElementById('viewer-count').textContent = d.count || 0;
+    }).catch(() => {});
+  }, 2000);
+
+  updateLink();
+</script>
+</body>
+</html>
